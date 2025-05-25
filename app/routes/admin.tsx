@@ -36,10 +36,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    return json<LoaderData>({
+    return Response.json({
       token,
-      feedbacks: res.data.data || [],
-    });
+      feedbacks: res.data.data
+    })
   } catch (error) {
     console.error("Failed to fetch feedbacks:", error);
     return redirect("/adminlogin");

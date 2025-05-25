@@ -19,7 +19,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return new Response(null, {
       status: 302,
       headers: {
-        Location: "/admin/dashboard",
+        Location: "/admin",
       },
     });
   }
