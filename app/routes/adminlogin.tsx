@@ -102,7 +102,7 @@ export default function AdminLogin() {
           required
           style={{ width: "100%", marginBottom: 10, padding: 8 }}
         />
-        <button type="submit" style={{ padding: 10, width: "100%" }}>
+        <button className="hover:cursor-pointer border" type="submit" style={{ padding: 10, width: "100%" }}>
           Login
         </button>
       </Form>
