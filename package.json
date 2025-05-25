@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@directus/sdk": "^19.1.0",
+    "@mantine/core": "^8.0.1",
+    "@mantine/notifications": "^8.0.1",
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
     "axios": "^1.9.0",
@@ -26,6 +28,9 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "postcss": "^8.5.3",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
     "remix-flat-routes": "^0.8.5",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",

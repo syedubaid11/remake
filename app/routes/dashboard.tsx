@@ -1,11 +1,7 @@
-import {
-  useLoaderData,
-  Form,
-  redirect,
-  type LoaderFunctionArgs,
-  type ActionFunctionArgs,
-} from "react-router-dom";
+import {useLoaderData,Form,redirect, type LoaderFunctionArgs,type ActionFunctionArgs,} from "react-router-dom";
 import axios from "axios";
+import { Container, Paper, TextInput, Title, Text, Button, Stack, Group, Divider } from "@mantine/core";
+
 
 interface Feedback {
   id: number;
@@ -71,31 +67,51 @@ export default function Dashboard() {
   const { feedbacks } = useLoaderData() as { feedbacks: Feedback[] };
 
   return (
-    <div className="min-h-screen p-8 bg-slate-900 text-white flex flex-col items-center gap-8">
-      <h1 className="text-5xl font-bold">Dashboard</h1>
+    <Container size="sm" py="xl">
+      <Title order={1} align="center" mb="xl" c='teal'>
+        Dashboard
+      </Title>
 
-      <Form method="post" className="bg-white text-black p-6 rounded w-full max-w-md">
-        <h2 className="text-xl mb-4 font-semibold">Add Feedback</h2>
-        <input name="title" placeholder="Title" className="input" required />
-        <input name="description" placeholder="Description" className="input" required />
-        <input name="category" placeholder="Category" className="input" required />
-        <button type="submit" className="btn mt-4 w-full">Submit</button>
-      </Form>
+      <Paper shadow="md" radius="md" p="lg" withBorder mb="xl">
+        <Title order={2} mb="md">
+          Add Feedback
+        </Title>
+        <Form method="post">
+          <Stack>
+            <TextInput name="title" placeholder="Title" required />
+            <TextInput name="description" placeholder="Description" required />
+            <TextInput name="category" placeholder="Category" required />
+            <Button type="submit" fullWidth mt="md">
+              Submit
+            </Button>
+          </Stack>
+        </Form>
+      </Paper>
 
-      <div className="max-w-xl w-full">
-        <h2 className="text-xl mb-4 font-semibold">Your Feedbacks</h2>
-        {feedbacks.length ? (
-          feedbacks.map(({ id, title, description, category }) => (
-            <div key={id} className="bg-white text-black rounded p-4 mb-4 shadow">
-              <h3 className="font-bold text-lg">{title}</h3>
-              <p>{description}</p>
-              <small className="text-gray-700">Category: {category}</small>
-            </div>
-          ))
-        ) : (
-          <p>No feedbacks yet.</p>
-        )}
-      </div>
-    </div>
+      <Title order={2} mb="md">
+        Your Feedbacks
+      </Title>
+
+      {feedbacks.length ? (
+        <Stack>
+          {feedbacks.map(({ id, title, description, category }) => (
+            <Paper key={id} shadow="xs" radius="md" p="md" withBorder>
+              <Group justify="space-between">
+                <Text fw={600} size="lg">
+                  {title}
+                </Text>
+                <Text c="dimmed" size="sm">
+                  {category}
+                </Text>
+              </Group>
+              <Divider my="sm" />
+              <Text>{description}</Text>
+            </Paper>
+          ))}
+        </Stack>
+      ) : (
+        <Text>No feedbacks yet.</Text>
+      )}
+    </Container>
   );
 }
