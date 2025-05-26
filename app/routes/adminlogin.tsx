@@ -3,6 +3,14 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
 import { Container, Paper,TextInput,PasswordInput,Title,Button,Text,Stack,Alert,} from "@mantine/core";
 import { client } from "../utils/directus";
 import { readMe,readRole } from "@directus/sdk";
+import {withYup} from "@rvf/yup";
+import {useForm} from "@rvf/react";
+import * as yup from 'yup';
+
+const schema=yup.object({
+  email:yup.string().email("Invalid Email").required("Email is required!!!"),
+  password:yup.string().min(4,"Password must be greater than 4 characters").required("Password is required!!"),
+})
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const cookie = request.headers.get("cookie");
@@ -104,7 +112,7 @@ export default function AdminLogin() {
             {actionData.message}
           </Alert>
         )}
-        <Form method="post">
+        <form method="post">
           <Stack>
             <TextInput
               name="email"
@@ -122,7 +130,7 @@ export default function AdminLogin() {
               Login
             </Button>
           </Stack>
-        </Form>
+        </form>
       </Paper>
     </Container>
   );
