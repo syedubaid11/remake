@@ -142,8 +142,8 @@ export default function Admin() {
 
   return (
     <Container size="lg" p="md">
-      <Group position="apart" mb="lg">
-        <Title order={2}>Admin Dashboard</Title>
+      <Group mb="lg">
+        <Title c={"white"} order={2}>Admin Dashboard</Title>
         <Group>
           <Button 
             color="blue" 
@@ -237,7 +237,7 @@ export default function Admin() {
         ) : (
           feedbacks.map((fb) => (
             <Paper key={fb.id} withBorder p="md" radius="md" shadow="xs">
-              <Group position="apart" mb="xs">
+              <Group mb="xs">
                 <Text fw={500} size="lg">
                   {fb.title}
                 </Text>
