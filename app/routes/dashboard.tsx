@@ -1,14 +1,12 @@
 import {useLoaderData,Form,redirect, type LoaderFunctionArgs,type ActionFunctionArgs,} from "react-router-dom";
-import axios from "axios";
 import { Container, Paper, TextInput, Title, Text, Button, Stack, Group, Divider } from "@mantine/core";
 import { client } from '../utils/directus';  //directus client import
-import { auth } from "@directus/sdk";
-import { readMe } from "@directus/sdk";
+import { readMe, readItems ,createItem } from "@directus/sdk";
 
 
 interface Feedback {
   id: number;
-  title: string;
+  title: string; 
   description: string;
   category: string;
 }
@@ -29,15 +27,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const user=await client.request(readMe()); // Get current user
     const userId = user.id;
 
-    const feedbacks = await client.items('feedbacks').readByQuery({
-      filter: {
-        user_created: {
-          _eq: userId
+    const feedbacks=await client.request(
+      readItems('feedbacks',{
+        filter:{
+          user_created: {
+            _eq: userId
+          }
         }
-      }
-    });
+      })
+    );
+    return Response.json({ feedbacks: feedbacks });
 
-    return Response.json({ feedbacks: feedbacks.data });
   } catch {
     return redirect("/login");
   }
@@ -57,15 +57,17 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "All fields are required" }, { status: 400 });
 
   try {
-    // await axios.post(
-    //   `${API_URL}/items/feedbacks`,
-    //   { title, description, category },
-    //   { headers: { Authorization: `Bearer ${token}` } }
-    // );
-    // return redirect("/dashboard");
-    const user = await client.users.me.read(); // Get current user
+   // Get current user
+    const user=await client.request(readMe());
     const userId = user.id;
-    await client.items('feedbacks').createOne({ title, description, category, user_created: userId });
+
+    await client.request(createItem('feedbacks', {
+      title,
+      description,
+      category,
+      user_created: userId
+    }))
+
     return redirect("/dashboard");
   } catch {
     return Response.json({ error: "Failed to add feedback" }, { status: 500 });

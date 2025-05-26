@@ -1,20 +1,7 @@
 import { redirect, useLoaderData, useNavigate } from "react-router-dom";
 import type { LoaderFunctionArgs } from "react-router";
 import { useState } from "react";
-import {
-  Button,
-  Container,
-  Group,
-  Select,
-  Stack,
-  TextInput,
-  Textarea,
-  Title,
-  Paper,
-  Text,
-  Flex,
-  Alert
-} from "@mantine/core";
+import {Button,Container, Group, Select, Stack, TextInput, Textarea,Title, Paper, Text,Flex, Alert} from "@mantine/core";
 import { Form } from "react-router";
 import { client } from "../utils/directus";
 import { deleteItem, readItems, updateItem, createItem } from "@directus/sdk";
@@ -32,7 +19,7 @@ interface LoaderData {
   feedbacks: Feedback[];
 }
 
-export async function loader({ request }: any) {
+export async function loader({ request }: LoaderFunctionArgs) {
   try {
     const cookie = request.headers.get("cookie");
     const token = cookie?.match(/directus_token=([^;]+)/)?.[1];
