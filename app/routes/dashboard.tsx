@@ -1,6 +1,9 @@
 import {useLoaderData,Form,redirect, type LoaderFunctionArgs,type ActionFunctionArgs,} from "react-router-dom";
 import axios from "axios";
 import { Container, Paper, TextInput, Title, Text, Button, Stack, Group, Divider } from "@mantine/core";
+import { client } from '../utils/directus';  //directus client import
+import { auth } from "@directus/sdk";
+import { readMe } from "@directus/sdk";
 
 
 interface Feedback {
@@ -9,8 +12,6 @@ interface Feedback {
   description: string;
   category: string;
 }
-
-const API_URL = "http://128.140.75.83:2221";
 
 function getToken(cookie: string | null): string | null {
   if (!cookie) return null;
@@ -23,21 +24,25 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) return redirect("/login");
 
   try {
-    const userRes = await axios.get(`${API_URL}/users/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+    client.setToken(token); // Authenticate the SDK client
+
+    const user=await client.request(readMe()); // Get current user
+    const userId = user.id;
+
+    const feedbacks = await client.items('feedbacks').readByQuery({
+      filter: {
+        user_created: {
+          _eq: userId
+        }
+      }
     });
-    const userId = userRes.data.data.id;
 
-    const feedbackRes = await axios.get(
-      `${API_URL}/items/feedbacks?filter[user_created][_eq]=${userId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    return Response.json({ feedbacks: feedbackRes.data.data });
+    return Response.json({ feedbacks: feedbacks.data });
   } catch {
     return redirect("/login");
   }
 }
+
 
 export async function action({ request }: ActionFunctionArgs) {
   const token = getToken(request.headers.get("Cookie"));
@@ -52,11 +57,15 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "All fields are required" }, { status: 400 });
 
   try {
-    await axios.post(
-      `${API_URL}/items/feedbacks`,
-      { title, description, category },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    // await axios.post(
+    //   `${API_URL}/items/feedbacks`,
+    //   { title, description, category },
+    //   { headers: { Authorization: `Bearer ${token}` } }
+    // );
+    // return redirect("/dashboard");
+    const user = await client.users.me.read(); // Get current user
+    const userId = user.id;
+    await client.items('feedbacks').createOne({ title, description, category, user_created: userId });
     return redirect("/dashboard");
   } catch {
     return Response.json({ error: "Failed to add feedback" }, { status: 500 });
@@ -68,7 +77,7 @@ export default function Dashboard() {
 
   return (
     <Container size="sm" py="xl">
-      <Title order={1} align="center" mb="xl" c='teal'>
+      <Title order={1} ta="center" mb="xl" c='teal'>
         Dashboard
       </Title>
 

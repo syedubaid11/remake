@@ -14,12 +14,17 @@
     "@mantine/notifications": "^8.0.1",
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
+    "@rvf/react-router": "^7.1.5",
+    "@rvf/remix": "^6.3.0",
+    "@rvf/yup": "^7.0.2",
     "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
     "isbot": "^5.1.27",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.5.3",
-    "react-router-dom": "^7.6.0"
+    "react-router-dom": "^7.6.0",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@react-router/dev": "^7.5.3",

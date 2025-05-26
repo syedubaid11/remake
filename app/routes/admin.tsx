@@ -1,18 +1,30 @@
-import { redirect } from "react-router";
+import { redirect, useLoaderData, useNavigate } from "react-router-dom";
 import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
 import { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router";
+import {
+  Button,
+  Container,
+  Group,
+  Select,
+  Stack,
+  TextInput,
+  Textarea,
+  Title,
+  Paper,
+  Text,
+  Flex,
+  Alert
+} from "@mantine/core";
+import { Form } from "react-router";
+import { client } from "../utils/directus";
+import { deleteItem, readItems, updateItem, createItem } from "@directus/sdk";
 
-const directus_url = "http://128.140.75.83:2221";
-
-interface Feedback {
+export interface Feedback {
   id: number;
   title: string;
   description: string;
   category: string;
-  status?: string;
+  status: string;
 }
 
 interface LoaderData {
@@ -20,134 +32,266 @@ interface LoaderData {
   feedbacks: Feedback[];
 }
 
-// 🔁 Loader
-export async function loader({ request }: LoaderFunctionArgs) {
-  const cookie = request.headers.get("Cookie") || "";
-
-  const tokenMatch = cookie.match(/directus_token=([^;]+)/);
-  const token = tokenMatch?.[1];
-
-  if (!token) {
-    return redirect("/adminlogin");
-  }
-
+export async function loader({ request }: any) {
   try {
-    const res = await axios.get(`${directus_url}/items/feedbacks`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const cookie = request.headers.get("cookie");
+    const token = cookie?.match(/directus_token=([^;]+)/)?.[1];
 
-    return Response.json({
-      token,
-      feedbacks: res.data.data
-    })
+    if (!token) {
+      return redirect("/login");
+    }
+
+    client.setToken(token); // Ensure token is set
+
+    const feedbacks = await client.request(readItems("feedbacks"));
+
+    if (!feedbacks || !Array.isArray(feedbacks)) {
+      throw new Error("Failed to fetch feedbacks.");
+    }
+
+    return { token, feedbacks };
   } catch (error) {
     console.error("Failed to fetch feedbacks:", error);
-    return redirect("/adminlogin");
+    return redirect("/login"); // Or show a proper error page
   }
 }
 
-
 export default function Admin() {
-    const { token, feedbacks: initialFeedbacks } = useLoaderData<LoaderData>();
-    const [feedbacks, setFeedbacks] = useState(initialFeedbacks);
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [newFeedback, setNewFeedback] = useState({ title: "", description: "", category: "" });
-    const navigate = useNavigate();
-  
-    const fetchFeedbacks = async () => {
-      const res = await axios.get(`${directus_url}/items/feedbacks`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setFeedbacks(res.data.data || []);
-    };
-  
-    const handleStatusUpdate = async (id: number, status: string) => {
-      await axios.patch(`${directus_url}/items/feedbacks/${id}`, { status }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      await fetchFeedbacks();
-    };
-  
-    const handleDelete = async (id: number) => {
-      await axios.delete(`${directus_url}/items/feedbacks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setFeedbacks(feedbacks.filter(fb => fb.id !== id));
-    };
-  
-    const handleAdd = async (e: React.FormEvent) => {
-      e.preventDefault();
-      const res = await axios.post(`${directus_url}/items/feedbacks`, newFeedback, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setFeedbacks([...feedbacks, res.data.data]);
+  const { token, feedbacks: initialFeedbacks } = useLoaderData() as LoaderData;
+  const [feedbacks, setFeedbacks] = useState(initialFeedbacks);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [newFeedback, setNewFeedback] = useState({
+    title: "",
+    description: "",
+    category: "",
+  });
+  const navigate = useNavigate();
+
+  // Set token for all requests
+  if (token) {
+    client.setToken(token);
+  }
+
+  const fetchFeedbacks = async () => {
+    try {
+      setError("");
+      const feedbacks = await client.request(readItems("feedbacks"));
+      //@ts-ignore
+      setFeedbacks(feedbacks || []);
+    } catch (error: any) {
+      console.error("Failed to fetch feedbacks:", error);
+      setError("Failed to fetch feedbacks. Please try again.");
+    }
+  };
+
+  const handleStatusUpdate = async (id: number, status: string) => {
+    try {
+      setError("");
+      setLoading(true);
+      
+      await client.request(updateItem("feedbacks", id, { status }));
+      
+      // Update local state instead of refetching
+      setFeedbacks(prev => prev.map(fb => 
+        fb.id === id ? { ...fb, status } : fb
+      ));
+    } catch (error: any) {
+      console.error("Failed to update status:", error);
+      setError("Failed to update status. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      setError("");
+      setLoading(true);
+      
+      await client.request(deleteItem("feedbacks", id));
+      
+      // Update local state
+      setFeedbacks(feedbacks.filter((fb) => fb.id !== id));
+    } catch (error: any) {
+      console.error("Failed to delete feedback:", error);
+      setError("Failed to delete feedback. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setError("");
+      setLoading(true);
+      
+      const newItem = await client.request(createItem("feedbacks", {
+        ...newFeedback,
+        status: "pending" // Set default status
+      }));
+      
+      // Update local state
+      setFeedbacks([...feedbacks, newItem as Feedback]);
       setNewFeedback({ title: "", description: "", category: "" });
       setShowAddForm(false);
-    };
-  
-    const handleLogout = () => {
-      document.cookie = `admin_token=; path=/admin; Max-Age=0`;
-      document.cookie = `directus_token=; path=/admin; Max-Age=0`;
-      navigate("/adminlogin");
-    };
-  
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between mb-6">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <div className="space-x-2">
-            <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-500 text-white px-4 py-2 rounded">
-              {showAddForm ? "Cancel" : "Add Feedback"}
-            </button>
-            <button onClick={handleLogout} className="border border-red-500 text-red-500 px-4 py-2 rounded">
-              Logout
-            </button>
-          </div>
-        </div>
-  
-        {showAddForm && (
-          <form onSubmit={handleAdd} className="space-y-4 mb-6">
-            <input value={newFeedback.title} onChange={e => setNewFeedback({ ...newFeedback, title: e.target.value })}
-              className="w-full p-2 border rounded" placeholder="Title" required />
-            <textarea value={newFeedback.description}
-              onChange={e => setNewFeedback({ ...newFeedback, description: e.target.value })}
-              className="w-full p-2 border rounded" rows={4} placeholder="Description" required />
-            <select value={newFeedback.category}
-              onChange={e => setNewFeedback({ ...newFeedback, category: e.target.value })}
-              className="w-full p-2 border rounded" required>
-              <option value="">Select category</option>
-              <option value="bug">Bug</option>
-              <option value="feature">Feature</option>
-              <option value="improvement">Improvement</option>
-            </select>
-            <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">Add</button>
+    } catch (error: any) {
+      console.error("Failed to add feedback:", error);
+      setError("Failed to add feedback. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear all cookies
+    document.cookie = `admin_token=; path=/; Max-Age=0`;
+    document.cookie = `directus_token=; path=/; Max-Age=0`;
+    navigate("/adminlogin");
+  };
+
+  return (
+    <Container size="lg" p="md">
+      <Group position="apart" mb="lg">
+        <Title order={2}>Admin Dashboard</Title>
+        <Group>
+          <Button 
+            color="blue" 
+            onClick={() => setShowAddForm(!showAddForm)}
+            disabled={loading}
+          >
+            {showAddForm ? "Cancel" : "Add Feedback"}
+          </Button>
+          <Button color="red" variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
+        </Group>
+      </Group>
+
+      {error && (
+        <Alert color="red" mb="md" onClose={() => setError("")} withCloseButton>
+          {error}
+        </Alert>
+      )}
+
+      {showAddForm && (
+        <Paper withBorder p="md" mb="md" radius="md" shadow="sm">
+          <form onSubmit={handleAdd}>
+            <Stack>
+              <TextInput
+                label="Title"
+                placeholder="Enter feedback title"
+                value={newFeedback.title}
+                onChange={(e) =>
+                  setNewFeedback({ ...newFeedback, title: e.target.value })
+                }
+                required
+                disabled={loading}
+              />
+              <Textarea
+                label="Description"
+                placeholder="Enter feedback description"
+                value={newFeedback.description}
+                onChange={(e) =>
+                  setNewFeedback({ ...newFeedback, description: e.target.value })
+                }
+                required
+                minRows={3}
+                disabled={loading}
+              />
+              <Select
+                label="Category"
+                data={[
+                  { value: "bug", label: "Bug" },
+                  { value: "feature", label: "Feature Request" },
+                  { value: "improvement", label: "Improvement" },
+                  { value: "other", label: "Other" },
+                ]}
+                placeholder="Select category"
+                value={newFeedback.category}
+                onChange={(value) =>
+                  setNewFeedback({ ...newFeedback, category: value || "" })
+                }
+                required
+                disabled={loading}
+              />
+              <Group>
+                <Button 
+                  type="submit" 
+                  color="green" 
+                  loading={loading}
+                  disabled={loading}
+                >
+                  Add Feedback
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAddForm(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </Group>
+            </Stack>
           </form>
-        )}
-  
-        <div className="space-y-4">
-          {feedbacks.map(fb => (
-            <div key={fb.id} className="border p-4 rounded">
-              <div className="flex justify-between">
-                <h3 className="font-semibold">{fb.title}</h3>
-                <select
+        </Paper>
+      )}
+
+      <Stack>
+        {feedbacks.length === 0 ? (
+          <Paper withBorder p="md" radius="md">
+            <Text ta="center" c="dimmed">
+              No feedback found. Add some feedback to get started!
+            </Text>
+          </Paper>
+        ) : (
+          feedbacks.map((fb) => (
+            <Paper key={fb.id} withBorder p="md" radius="md" shadow="xs">
+              <Group position="apart" mb="xs">
+                <Text fw={500} size="lg">
+                  {fb.title}
+                </Text>
+                <Select
+                  data={[
+                    { value: "pending", label: "Pending" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "resolved", label: "Resolved" },
+                    { value: "rejected", label: "Rejected" },
+                  ]}
                   value={fb.status || "pending"}
-                  onChange={e => handleStatusUpdate(fb.id, e.target.value)}
-                  className="border px-2 py-1 text-sm rounded">
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-              <p>{fb.description}</p>
-              <div className="flex justify-between text-sm text-gray-500 mt-2">
-                <span>{fb.category}</span>
-                <button onClick={() => handleDelete(fb.id)} className="text-red-500">Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  
+                  onChange={(value) => value && handleStatusUpdate(fb.id, value)}
+                  size="sm"
+                  w={150}
+                  disabled={loading}
+                />
+              </Group>
+              
+              <Text mb="sm" lineClamp={3}>
+                {fb.description}
+              </Text>
+              
+              <Flex justify="space-between" align="center">
+                <Text size="sm" c="dimmed" tt="capitalize">
+                  Category: {fb.category}
+                </Text>
+                <Button
+                  variant="subtle"
+                  color="red"
+                  size="xs"
+                  onClick={() => handleDelete(fb.id)}
+                  loading={loading}
+                  disabled={loading}
+                >
+                  Delete
+                </Button>
+              </Flex>
+            </Paper>
+          ))
+        )}
+      </Stack>
+    </Container>
+  );
+}

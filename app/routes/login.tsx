@@ -3,11 +3,7 @@ import {TextInput,PasswordInput,Button,  Paper,Title,Text,Stack,Container,} from
 import { Form, useActionData } from "react-router-dom";
 import { createDirectus, authentication, rest } from "@directus/sdk";
 import type { ActionFunctionArgs } from "react-router-dom";
- 
-//directus initialised
-const client = createDirectus("http://128.140.75.83:2221")
-  .with(authentication("json"))
-  .with(rest());
+import {client} from "../utils/directus";
 
 //action function
 export async function action({ request }: ActionFunctionArgs) {
@@ -49,7 +45,7 @@ export default function Login() {
 
   return (
     <Container size={420} my={40}>
-      <Title align="center" c='teal'>Login</Title>
+      <Title ta="center" c='teal'>Login</Title>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         Enter your credentials to access the dashboard
       </Text>
