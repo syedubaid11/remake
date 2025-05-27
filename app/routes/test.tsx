@@ -1,13 +1,22 @@
-import {Container,Paper,TextInput,PasswordInput,Title, Button,Stack,Alert,} from "@mantine/core";
+import {
+  Container,
+  Paper,
+  TextInput,
+  PasswordInput,
+  Title,
+  Button,
+  Stack,
+  Alert,
+} from "@mantine/core";
 import { Form, useActionData, useNavigation } from "react-router-dom";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
 import { client } from "../utils/directus";
 import { readMe, readRole } from "@directus/sdk";
-import { useForm } from "@rvf/react";
-import { withYup } from "@rvf/yup";
+
+import { useForm, validator } from "@rvf/react";
 import * as yup from "yup";
 
-
+// Yup schema
 const schema = yup.object({
   email: yup.string().email("Invalid email").required("Email is required"),
   password: yup.string().min(6, "Password too short").required("Password is required"),
@@ -88,8 +97,18 @@ export default function AdminLogin() {
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
-    validator: withYup(schema),
+    validator: validator(schema),  // <-- use validator from rvf here
   });
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const isValid = await form.validate();
+
+    if (isValid) {
+      e.currentTarget.submit(); // submit normally to React Router action
+    }
+  };
 
   return (
     <Container size={420} my={60}>
@@ -103,18 +122,20 @@ export default function AdminLogin() {
             {actionData.message}
           </Alert>
         )}
-        <Form method="post" {...form.getFormProps()}>
+        <Form method="post" onSubmit={handleSubmit} {...form.getFormProps()}>
           <Stack>
             <TextInput
               label="Email"
               placeholder="you@example.com"
               {...form.getInputProps("email")}
+              error={form.errors.email}
               required
             />
             <PasswordInput
               label="Password"
               placeholder="Your password"
               {...form.getInputProps("password")}
+              error={form.errors.password}
               required
             />
             <Button type="submit" fullWidth loading={navigation.state === "submitting"}>
