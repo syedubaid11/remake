@@ -1,16 +1,17 @@
-import { Form, useActionData } from "react-router-dom";
+import {Container,Paper,TextInput,PasswordInput,Title, Button,Stack,Alert,} from "@mantine/core";
+import { Form, useActionData, useNavigation } from "react-router-dom";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router-dom";
-import { Container, Paper,TextInput,PasswordInput,Title,Button,Text,Stack,Alert,} from "@mantine/core";
 import { client } from "../utils/directus";
-import { readMe,readRole } from "@directus/sdk";
-import {withYup} from "@rvf/yup";
-import {useForm} from "@rvf/react";
-import * as yup from 'yup';
+import { readMe, readRole } from "@directus/sdk";
+import { useForm } from "@rvf/react";
+import { withYup } from "@rvf/yup";
+import * as yup from "yup";
 
-const schema=yup.object({
-  email:yup.string().email("Invalid Email").required("Email is required!!!"),
-  password:yup.string().min(4,"Password must be greater than 4 characters").required("Password is required!!"),
-})
+
+const schema = yup.object({
+  email: yup.string().email("Invalid email").required("Email is required"),
+  password: yup.string().min(6, "Password too short").required("Password is required"),
+});
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const cookie = request.headers.get("cookie");
@@ -34,45 +35,37 @@ export async function action({ request }: ActionFunctionArgs) {
   const password = formData.get("password")?.toString();
 
   if (!email || !password) {
-    return new Response(
-      JSON.stringify({ success: false, message: "Email or password missing." }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+    return {
+      success: false,
+      message: "Email or password missing.",
+    };
   }
 
   try {
-    // Login and set token
     const result = await client.login(email, password);
     const token = result.access_token;
     client.setToken(token);
 
-    // Get current user info
-    const user=await client.request(readMe());
-    const roleId=user.role;
-
+    const user = await client.request(readMe());
+    const roleId = user.role;
 
     if (!roleId) {
-      return new Response(
-        JSON.stringify({ success: false, message: "User role not found." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+      return {
+        success: false,
+        message: "User role not found.",
+      };
     }
 
-    //get the role details
     const roleInfo = await client.request(readRole(roleId));
     const roleName = roleInfo.name;
 
     if (roleName !== "Administrator") {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "You do not have permission to access this page.",
-        }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+      return {
+        success: false,
+        message: "You do not have permission to access this page.",
+      };
     }
 
-    // Redirect and set cookie
     return new Response(null, {
       status: 302,
       headers: {
@@ -82,23 +75,21 @@ export async function action({ request }: ActionFunctionArgs) {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Login failed. Check your credentials.",
-      }),
-      {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return {
+      success: false,
+      message: "Login failed. Check your credentials.",
+    };
   }
 }
 
 export default function AdminLogin() {
-  const actionData = useActionData() as | { success: false; message: string } | undefined;
+  const actionData = useActionData() as { success: false; message: string } | undefined;
+  const navigation = useNavigation();
+
+  const form = useForm({
+    defaultValues: { email: "", password: "" },
+    validator: withYup(schema),
+  });
 
   return (
     <Container size={420} my={60}>
@@ -112,21 +103,21 @@ export default function AdminLogin() {
             {actionData.message}
           </Alert>
         )}
-        <Form method="post">
+        <Form method="post" {...form.getFormProps()}>
           <Stack>
             <TextInput
-              name="email"
               label="Email"
               placeholder="you@example.com"
+              {...form.getInputProps("email")}
               required
             />
             <PasswordInput
-              name="password"
               label="Password"
               placeholder="Your password"
+              {...form.getInputProps("password")}
               required
             />
-            <Button type="submit" fullWidth>
+            <Button type="submit" fullWidth loading={navigation.state === "submitting"}>
               Login
             </Button>
           </Stack>
